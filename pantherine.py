@@ -10,7 +10,8 @@ import glob      # mrf
 import json      # save
 import xml.etree.ElementTree as ET # readXML
 from bisect import bisect_left     # binsearch
-import datetime
+import datetime  # now, elapsed
+import math      # tringle, rotate
 
 # Converts a string of characters into a unique number
 # @param string s = string of ASCII values
@@ -465,3 +466,104 @@ def now():
 # @return float = Time elapsed between now and _time in seconds.
 def elapsed(_time):
     return (datetime.datetime.now() - _time).total_seconds()
+
+# Complete triangle information
+# @param float theta = angle (in degrees)
+# @param float hyp = Hypotenuse weight
+# @param float opp = Opposite weight
+# @param float adj = Adjacent weight5
+# @param (float, float) p0 = The (x,y) value of the hyp/adj point.
+# @param bool xflip = invert p1 across x-axis when true
+# @param bool yflip = invert p1 across y-axis when true
+# @param float rotation = degrees for p1 and p2 to be rotated
+#
+# y p2.___. p1
+# ^   |  /
+# |   | /   when flip = False
+# |   |/
+# |   * p0
+# +-----------> x
+#
+# @return a dict object containing triangle data
+def triangle(theta=None,hyp=None,opp=None,adj=None,p0=(0,0),xflip=False,yflip=False,rotation=0.0):
+    # Validate input
+    n = 0
+    for item in [theta,hyp,opp,adj]:
+        if not item == None:
+            n += 1
+    if n < 2:
+        raise ValueError("Not enough info to complete triangle.")
+    
+    if theta == None:
+        if hyp == None:
+            theta = math.atan(opp/adj)
+            hyp = adj / math.cos(theta)
+        else:
+            if opp == None:
+                theta = math.acos(adj/hyp)
+                opp = hyp * math.sin(theta)
+            else:
+                theta = math.asin(opp/hyp)
+                if adj == None:
+                    adj = hyp * math.cos(theta)
+    else:
+        theta = math.radians(theta)
+        if hyp == None:
+            if opp == None:
+                opp = adj * math.tan(theta)
+                hyp = adj / math.cos(theta)
+            else:
+                hyp = opp / math.sin(theta)
+                if adj == None:
+                    adj = opp / math.tan(theta)
+        else:
+            if opp == None:
+                opp = adj * math.tan(theta)
+            elif adj == None:
+                adj = hyp * math.cos(theta)
+    
+    # Determine p1 and p2
+    if yflip:
+        y = p0[1] - adj
+    else:
+        y = p0[1] + adj
+    
+    if xflip:
+        x = p0[0] - opp
+    else:
+        x = p0[1] + opp
+    p1 = (x,y)
+    p2 = (p0[0],p1[1])
+    
+    if rotation > 0:
+        p1 = rotate(p1,rotation,p0)
+        p2 = rotate(p2,rotation,p0)
+    
+    tr = {
+        'theta':math.degrees(theta),
+        'hyp':hyp,
+        'opp':opp,
+        'adj':adj,
+        'p0':p0,
+        'p1':p1,
+        'p2':p2
+    }
+    return tr
+
+# Rotate a point by theta degrees
+# @param (float,float) p = (x,y) point
+# @param float theta = degrees to rotate
+# @param (x,y) origin = Point to be rotated around
+# @return rotated x,y point
+# Credit: https://gist.github.com/LyleScott/e36e08bfb23b1f87af68c9051f985302
+def rotate(p,theta,origin=(0,0)):
+    radians = math.radians(theta)
+    x, y = p
+    offset_x, offset_y = origin
+    adjusted_x = (x - offset_x)
+    adjusted_y = (y - offset_y)
+    cos_rad = math.cos(radians)
+    sin_rad = math.sin(radians)
+    qx = offset_x + cos_rad * adjusted_x + sin_rad * adjusted_y
+    qy = offset_y + -sin_rad * adjusted_x + cos_rad * adjusted_y
+    return (qx,qy)
